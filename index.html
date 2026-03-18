@@ -182,6 +182,7 @@ let keys={},score=0,kills=0;
 let ammo=6,maxAmmo=6,reloading=false,reloadTimer=0;
 let guardDead=false,gateOpen=false,boss=null;
 let frameCount=0,shakeTimer=0,shakeMag=0,msgTimer=0;
+let currentLevel=1;
 
 // ── INIT ──
 function goToMenu(){
@@ -199,13 +200,25 @@ function goToMenu(){
 function startGame(){
   initAudio();
   document.getElementById('overlay').style.display='none';
-  init(); state='level1'; running=true;
+  currentLevel=1; score=0;
+  initLevel(1); state='level1'; running=true;
   if(musicOn) startMusic();
   loop();
 }
-function init(){
-  kills=0;score=0;guardDead=false;gateOpen=false;boss=null;
-  ammo=maxAmmo;reloading=false;particles=[];bullets=[];frameCount=0;
+function init(){ initLevel(currentLevel); } // legacy shim
+
+function initLevel(n){
+  currentLevel=n;
+  kills=0; guardDead=false; gateOpen=false; boss=null;
+  ammo=maxAmmo; reloading=false; particles=[]; bullets=[]; frameCount=0;
+  if(n===1) initLevel1();
+  else if(n===2) initLevel2();
+  else if(n===3) initLevel3();
+  updateAmmoUI(); updateHPBar();
+}
+
+// ── LEVEL 1 (original) ──
+function initLevel1(){
   buildMap();
   player={x:200,y:300,w:36,h:36,hp:100,maxHp:100,speed:3.8,invincible:0};
   enemies=[
@@ -214,19 +227,102 @@ function init(){
     mkJayj(400,1100),mkJayj(1100,800),mkJayj(800,1400),
     mkJayj(1500,500),mkJayj(1200,1200),mkJayj(600,900),
   ];
-  updateAmmoUI();
   document.getElementById('waveInfo').innerHTML='LEVEL 1<br><span id="killCount" style="color:#ff4400">KILLS: 0</span>';
-  updateHPBar();
 }
+
+// ── LEVEL 2: THE FRIDGE ── ice maze, faster Jayjs, twin-guard, boss = CHILLY JAYJ ──
+function initLevel2(){
+  buildMap2();
+  player={x:200,y:300,w:36,h:36,hp:100,maxHp:100,speed:3.8,invincible:0};
+  enemies=[
+    mkGuard2(WORLD_W-360, WORLD_H/2 - 150),
+    mkGuard2(WORLD_W-360, WORLD_H/2 + 150),
+    mkJayj2(500,300),mkJayj2(750,500),mkJayj2(900,200),
+    mkJayj2(400,1200),mkJayj2(1100,900),mkJayj2(800,1500),
+    mkJayj2(1600,400),mkJayj2(1300,1100),mkJayj2(600,800),mkJayj2(1000,600),
+  ];
+  document.getElementById('waveInfo').innerHTML='LEVEL 2<br><span id="killCount" style="color:#44aaff">KILLS: 0</span>';
+}
+
+// ── LEVEL 3: THE DEEP FRYER ── lava theme, fast+tanky Jayjs, triple-guard, boss = INFERNO JAYJ ──
+function initLevel3(){
+  buildMap3();
+  player={x:200,y:300,w:36,h:36,hp:100,maxHp:100,speed:3.8,invincible:0};
+  enemies=[
+    mkGuard3(WORLD_W-360, WORLD_H/2 - 200),
+    mkGuard3(WORLD_W-360, WORLD_H/2),
+    mkGuard3(WORLD_W-360, WORLD_H/2 + 200),
+    mkJayj3(500,300),mkJayj3(750,500),mkJayj3(900,200),mkJayj3(400,1200),
+    mkJayj3(1100,900),mkJayj3(800,1500),mkJayj3(1600,400),mkJayj3(1300,1100),
+    mkJayj3(600,800),mkJayj3(1000,600),mkJayj3(1400,700),mkJayj3(700,1300),
+  ];
+  document.getElementById('waveInfo').innerHTML='LEVEL 3<br><span id="killCount" style="color:#ff6600">KILLS: 0</span>';
+}
+
+// ── ENEMY FACTORIES ──
 function mkJayj(x,y){return{x,y,w:40,h:40,hp:35,maxHp:35,speed:1.5+Math.random()*0.9,type:'jayj',angle:0,shootTimer:80+Math.random()*80,hurtTimer:0,wobble:Math.random()*Math.PI*2};}
-function mkGuard(x,y){return{x,y,w:60,h:60,hp:130,maxHp:130,speed:0.6,type:'guard',isGuard:true,angle:0,shootTimer:75,hurtTimer:0,wobble:0};}
+function mkGuard(x,y){return{x,y,w:60,h:60,hp:130,maxHp:130,speed:0.6,type:'guard',isGuard:true,guardIndex:0,angle:0,shootTimer:75,hurtTimer:0,wobble:0};}
 function mkMega(){return{x:WORLD_W-220,y:WORLD_H/2,w:100,h:100,hp:600,maxHp:600,speed:2.0,type:'megajayj',boss:true,angle:0,shootTimer:28,hurtTimer:0,wobble:0,rage:false};}
+
+// Level 2 enemies: faster, ice-blue
+function mkJayj2(x,y){return{x,y,w:40,h:40,hp:45,maxHp:45,speed:2.2+Math.random()*0.8,type:'jayj2',angle:0,shootTimer:60+Math.random()*60,hurtTimer:0,wobble:Math.random()*Math.PI*2};}
+function mkGuard2(x,y){return{x,y,w:62,h:62,hp:160,maxHp:160,speed:0.8,type:'guard2',isGuard:true,guardIndex:1,angle:0,shootTimer:60,hurtTimer:0,wobble:0};}
+function mkChilly(){return{x:WORLD_W-220,y:WORLD_H/2,w:110,h:110,hp:700,maxHp:700,speed:2.3,type:'chillyjayj',boss:true,angle:0,shootTimer:22,hurtTimer:0,wobble:0,rage:false};}
+
+// Level 3 enemies: tanky, fire-red
+function mkJayj3(x,y){return{x,y,w:44,h:44,hp:60,maxHp:60,speed:2.0+Math.random()*1.0,type:'jayj3',angle:0,shootTimer:50+Math.random()*50,hurtTimer:0,wobble:Math.random()*Math.PI*2};}
+function mkGuard3(x,y){return{x,y,w:65,h:65,hp:200,maxHp:200,speed:1.0,type:'guard3',isGuard:true,guardIndex:2,angle:0,shootTimer:50,hurtTimer:0,wobble:0};}
+function mkInferno(){return{x:WORLD_W-220,y:WORLD_H/2,w:120,h:120,hp:900,maxHp:900,speed:2.6,type:'infernojayj',boss:true,angle:0,shootTimer:18,hurtTimer:0,wobble:0,rage:false};}
+
+// ── MAP 2: THE FRIDGE (icy corridors) ──
+function buildMap2(){
+  walls=[];
+  const T=40;
+  function r(x,y,w,h,opt={}){walls.push({x,y,w,h,...opt});}
+  r(0,0,WORLD_W,T); r(0,WORLD_H-T,WORLD_W,T); r(0,0,T,WORLD_H); r(WORLD_W-T,0,T,WORLD_H);
+  bossGateDef={x:WORLD_W-T*7,y:T,w:T,h:WORLD_H-T*2};
+  r(bossGateDef.x,bossGateDef.y,bossGateDef.w,bossGateDef.h,{isBossGate:true});
+  // Long horizontal ice corridors
+  r(T*2,T*5,T*10,T*2); r(T*2,T*12,T*10,T*2); r(T*2,T*20,T*10,T*2); r(T*2,T*28,T*10,T*2); r(T*2,T*36,T*10,T*2);
+  r(T*15,T*3,T*2,T*10); r(T*15,T*17,T*2,T*10); r(T*15,T*31,T*2,T*10);
+  r(T*20,T*5,T*8,T*2); r(T*20,T*15,T*8,T*2); r(T*20,T*25,T*8,T*2); r(T*20,T*35,T*8,T*2);
+  r(T*30,T*2,T*2,T*12); r(T*30,T*18,T*2,T*12); r(T*30,T*34,T*2,T*8);
+  r(T*34,T*6,T*10,T*2); r(T*34,T*14,T*10,T*2); r(T*34,T*22,T*10,T*2); r(T*34,T*30,T*10,T*2); r(T*34,T*38,T*10,T*2);
+  r(T*46,T*4,T*2,T*8); r(T*46,T*16,T*2,T*8); r(T*46,T*28,T*2,T*8);
+  r(T*50,T*8,T*4,T*2); r(T*50,T*20,T*4,T*2); r(T*50,T*32,T*4,T*2);
+  // Ice pillars
+  [[6,9],[6,17],[6,25],[6,33],[12,7],[12,16],[12,24],[12,32],[18,10],[18,22],[18,34],[24,8],[24,18],[24,28],[24,38],[28,12],[28,26],[38,10],[38,20],[38,30],[42,5],[42,15],[42,25],[42,35],[48,12],[48,24],[48,36],[52,10],[52,28]].forEach(([tx,ty])=>r(T*tx,T*ty,T*2,T*2));
+}
+
+// ── MAP 3: THE DEEP FRYER (lava bunker) ──
+function buildMap3(){
+  walls=[];
+  const T=40;
+  function r(x,y,w,h,opt={}){walls.push({x,y,w,h,...opt});}
+  r(0,0,WORLD_W,T); r(0,WORLD_H-T,WORLD_W,T); r(0,0,T,WORLD_H); r(WORLD_W-T,0,T,WORLD_H);
+  bossGateDef={x:WORLD_W-T*7,y:T,w:T,h:WORLD_H-T*2};
+  r(bossGateDef.x,bossGateDef.y,bossGateDef.w,bossGateDef.h,{isBossGate:true});
+  // Lava bunker: thick walls, tight choke-points
+  r(T*3,T*3,T*4,T*16); r(T*3,T*26,T*4,T*16);
+  r(T*9,T*6,T*2,T*10); r(T*9,T*22,T*2,T*10); r(T*9,T*36,T*2,T*6);
+  r(T*13,T*3,T*6,T*3); r(T*13,T*38,T*6,T*3); r(T*13,T*16,T*6,T*3); r(T*13,T*26,T*6,T*3);
+  r(T*21,T*2,T*3,T*14); r(T*21,T*20,T*3,T*8); r(T*21,T*32,T*3,T*10);
+  r(T*26,T*6,T*8,T*3); r(T*26,T*20,T*8,T*3); r(T*26,T*34,T*8,T*3);
+  r(T*36,T*2,T*2,T*16); r(T*36,T*26,T*2,T*16);
+  r(T*40,T*8,T*2,T*10); r(T*40,T*26,T*2,T*10);
+  r(T*44,T*4,T*8,T*3); r(T*44,T*14,T*8,T*3); r(T*44,T*24,T*8,T*3); r(T*44,T*34,T*8,T*3);
+  r(T*50,T*8,T*3,T*10); r(T*50,T*24,T*3,T*10);
+  // Lava pillars (big blocks)
+  [[6,22],[11,14],[11,32],[16,9],[16,21],[16,31],[24,12],[24,24],[24,36],[30,8],[30,16],[30,28],[30,38],[38,12],[38,22],[38,32],[42,18],[46,10],[46,28],[52,14],[52,32]].forEach(([tx,ty])=>r(T*tx,T*ty,T*3,T*3));
+}
+
+function isPlaying(){ return state==='level1'||state==='level2'||state==='level3'||state==='boss'||state==='boss2'||state==='boss3'; }
 
 // ── LOOP ──
 function loop(){
   if(!running)return;
   requestAnimationFrame(loop);
-  if(state!=='level1'&&state!=='boss')return;
+  if(!isPlaying())return;
   frameCount++;update();render();renderMinimap();
 }
 
@@ -263,23 +359,41 @@ function update(){
     e.angle=Math.atan2(ty,tx);
 
     if(e.isGuard){
-      let gx=WORLD_W-360-e.x,gy=WORLD_H/2+Math.sin(frameCount*0.014)*220-e.y;
+      // Each guard patrols at a vertical offset based on its index in the enemy list
+      let guardPatrolX = WORLD_W-360;
+      let guardPatrolY = WORLD_H/2 + Math.sin(frameCount*0.014)*220;
+      // Offset multiple guards so they don't stack
+      let guardOffset = (enemies.filter(g=>g.isGuard).indexOf(e)) * 160 - 80;
+      let gx=guardPatrolX-e.x, gy=(guardPatrolY+guardOffset)-e.y;
       let gd=Math.sqrt(gx*gx+gy*gy);
       if(gd>2){let r2=resolveWall(e,e.x+(gx/gd)*e.speed,e.y+(gy/gd)*e.speed);e.x=r2.x;e.y=r2.y;}
     }else{
       if(dist>1){let r2=resolveWall(e,e.x+(tx/dist)*e.speed,e.y+(ty/dist)*e.speed);e.x=r2.x;e.y=r2.y;}
     }
+
+    // Boss rage triggers
     if(e.type==='megajayj'&&e.hp<220&&!e.rage){e.rage=true;e.speed=3.8;showMessage('⚠ MEGA JAYJ ENRAGED! ⚠');}
+    if(e.type==='chillyjayj'&&e.hp<250&&!e.rage){e.rage=true;e.speed=4.2;showMessage('🧊 CHILLY JAYJ IS FREEZING MAD! 🧊');}
+    if(e.type==='infernojayj'&&e.hp<320&&!e.rage){e.rage=true;e.speed=4.8;showMessage('🔥 INFERNO JAYJ MAXED OUT! 🔥');}
 
     // Shoot
     e.shootTimer--;
     if(e.shootTimer<=0){
-      if(e.type==='megajayj'){
-        e.shootTimer=e.rage?16:28;
-        let sp=e.rage?5:3;
-        for(let s=0;s<sp;s++){mkBullet(e.x,e.y,e.angle+(s-(sp-1)/2)*0.22,false,e.rage?14:10);}
+      let isBoss=e.type==='megajayj'||e.type==='chillyjayj'||e.type==='infernojayj';
+      if(isBoss){
+        let sp=e.rage?(e.type==='infernojayj'?7:5):3;
+        let interval=e.rage?(e.type==='infernojayj'?12:14):22;
+        e.shootTimer=interval;
+        for(let s=0;s<sp;s++){mkBullet(e.x,e.y,e.angle+(s-(sp-1)/2)*0.22,false,e.rage?15:10);}
+        // Inferno also shoots in a ring when raging
+        if(e.type==='infernojayj'&&e.rage&&frameCount%90===0){
+          for(let s=0;s<8;s++){mkBullet(e.x,e.y,(s/8)*Math.PI*2,false,12);}
+        }
       }else if(e.isGuard){
-        e.shootTimer=65; mkBullet(e.x,e.y,e.angle,false,13);
+        e.shootTimer=55; mkBullet(e.x,e.y,e.angle,false,13);
+        // Guards in later levels shoot double
+        if(e.type==='guard2'||e.type==='guard3'){mkBullet(e.x,e.y,e.angle+0.2,false,11);}
+        if(e.type==='guard3'){mkBullet(e.x,e.y,e.angle-0.2,false,11);}
       }else{
         e.shootTimer=90+Math.random()*60; mkBullet(e.x,e.y,e.angle,false,8);
       }
@@ -287,32 +401,59 @@ function update(){
 
     // Touch dmg
     if(dist<(e.w/2+player.w/2)&&player.invincible<=0){
-      let dmg=e.type==='megajayj'?16:6;
+      let isBoss=e.type==='megajayj'||e.type==='chillyjayj'||e.type==='infernojayj';
+      let dmg=isBoss?16:6;
       player.hp-=dmg;player.invincible=50;shakeTimer=14;shakeMag=7;
       spawnPfx(player.x,player.y,'#ff4400',10);updateHPBar();sfx(100,'sawtooth',0.2,0.15);
     }
 
     // Death
     if(e.hp<=0){
-      spawnPfx(e.x,e.y,e.type==='megajayj'?'#ff00ff':e.isGuard?'#ff8800':'#ff4400',24);
+      let isBoss=e.type==='megajayj'||e.type==='chillyjayj'||e.type==='infernojayj';
+      let pfxColor=e.type==='chillyjayj'?'#88ddff':e.type==='infernojayj'?'#ff6600':e.isGuard?'#ff8800':'#ff4400';
+      if(isBoss) pfxColor=e.type==='chillyjayj'?'#88ddff':e.type==='infernojayj'?'#ff4400':'#ff00ff';
+      spawnPfx(e.x,e.y,pfxColor,isBoss?70:24);
+
       if(e.isGuard){
-        guardDead=true;gateOpen=true;
-        walls=walls.filter(w=>!w.isBossGate);
-        boss=mkMega();enemies.push(boss);state='boss';
-        document.getElementById('waveInfo').innerHTML='⚠ BOSS ⚠<br><span style="color:#ff00ff">MEGA JAYJ</span>';
-        showMessage('🔓 BOSS GATE OPEN — MEGA JAYJ IS HERE!');sfx(80,'sawtooth',0.7,0.25);
-      }else if(e.type==='megajayj'){
-        spawnPfx(e.x,e.y,'#ffcc00',70);enemies.splice(i,1);
-        setTimeout(()=>showWin(),900);return;
+        // Check if ALL guards are dead
+        let remainingGuards = enemies.filter((en,idx)=>en.isGuard && idx!==i);
+        if(remainingGuards.length===0){
+          guardDead=true;gateOpen=true;
+          walls=walls.filter(w=>!w.isBossGate);
+          let bossEnemy = currentLevel===3?mkInferno():currentLevel===2?mkChilly():mkMega();
+          boss=bossEnemy; enemies.push(boss);
+          let bossState = currentLevel===3?'boss3':currentLevel===2?'boss2':'boss';
+          state=bossState;
+          let bossName = currentLevel===3?'INFERNO JAYJ':currentLevel===2?'CHILLY JAYJ':'MEGA JAYJ';
+          let bossColor = currentLevel===3?'#ff6600':currentLevel===2?'#88ddff':'#ff00ff';
+          document.getElementById('waveInfo').innerHTML=`⚠ BOSS ⚠<br><span style="color:${bossColor}">${bossName}</span>`;
+          showMessage(`🔓 BOSS GATE OPEN — ${bossName} IS HERE!`);sfx(80,'sawtooth',0.7,0.25);
+        }
+      }else if(isBoss){
+        spawnPfx(e.x,e.y,'#ffcc00',80);enemies.splice(i,1);
+        if(currentLevel<3){
+          // Advance to next level
+          setTimeout(()=>showLevelComplete(),900);
+        } else {
+          setTimeout(()=>showWin(),900);
+        }
+        return;
       }else{kills++;score+=100;sfx(320,'square',0.12,0.1);updateKills();}
       enemies.splice(i,1);continue;
     }
   }
 
   // Periodic spawns
-  if(state==='level1'&&frameCount%380===0){
+  let levelState = 'level'+currentLevel;
+  if(state===levelState&&frameCount%380===0){
     let ct=enemies.filter(e=>!e.isGuard).length;
-    if(ct<12){let sp=[[500,1500],[1200,350],[850,1050],[1600,800],[350,650]];let p=sp[Math.floor(Math.random()*sp.length)];enemies.push(mkJayj(p[0],p[1]));}
+    let maxEnemies=currentLevel===3?16:currentLevel===2?14:12;
+    if(ct<maxEnemies){
+      let sp=[[500,1500],[1200,350],[850,1050],[1600,800],[350,650],[700,1300],[1400,500]];
+      let p=sp[Math.floor(Math.random()*sp.length)];
+      let mkFn=currentLevel===3?mkJayj3:currentLevel===2?mkJayj2:mkJayj;
+      enemies.push(mkFn(p[0],p[1]));
+    }
   }
 
   // Bullets
@@ -355,17 +496,20 @@ function render(){
   if(shakeTimer>0)ctx.translate((Math.random()-0.5)*shakeMag,(Math.random()-0.5)*shakeMag);
   ctx.save();ctx.translate(-camX,-camY);
 
-  // BG
-  ctx.fillStyle='#0d0000';ctx.fillRect(camX,camY,VW,VH);
+  // BG — tinted per level
+  let bgColor = currentLevel===3?'#0d0400':currentLevel===2?'#000d14':'#0d0000';
+  ctx.fillStyle=bgColor;ctx.fillRect(camX,camY,VW,VH);
 
   // Floor tiles
-  ctx.strokeStyle='#1a0400';ctx.lineWidth=1;
+  let gridColor = currentLevel===3?'#1a0800':currentLevel===2?'#001a2a':'#1a0400';
+  ctx.strokeStyle=gridColor;ctx.lineWidth=1;
   let gx=Math.floor(camX/40)*40,gy=Math.floor(camY/40)*40;
   for(let x=gx;x<camX+VW+40;x+=40){ctx.beginPath();ctx.moveTo(x,camY);ctx.lineTo(x,camY+VH);ctx.stroke();}
   for(let y=gy;y<camY+VH+40;y+=40){ctx.beginPath();ctx.moveTo(camX,y);ctx.lineTo(camX+VW,y);ctx.stroke();}
 
   // Floor tile squares (every 80px alternating)
-  ctx.fillStyle='#110200';
+  let tileColor = currentLevel===3?'#110500':currentLevel===2?'#001120':'#110200';
+  ctx.fillStyle=tileColor;
   for(let x=Math.floor(camX/80)*80;x<camX+VW+80;x+=80){
     for(let y=Math.floor(camY/80)*80;y<camY+VH+80;y+=80){
       if(((x/80)+(y/80))%2===0)ctx.fillRect(x,y,80,80);
@@ -385,12 +529,15 @@ function render(){
       let gl=ctx.createLinearGradient(w.x-20,0,w.x,0);gl.addColorStop(0,'transparent');gl.addColorStop(1,'#ff880033');
       ctx.fillStyle=gl;ctx.fillRect(w.x-30,w.y,30,w.h);
     }else if(!w.isBossGate){
-      // Wall top shadow
-      ctx.fillStyle='#220700';ctx.fillRect(w.x,w.y,w.w,w.h);
-      ctx.fillStyle='#3a1200';ctx.fillRect(w.x,w.y,w.w,5);
-      ctx.fillStyle='#180400';ctx.fillRect(w.x,w.y+w.h-4,w.w,4);
-      ctx.strokeStyle='#ff4400';ctx.lineWidth=2;ctx.strokeRect(w.x+1,w.y+1,w.w-2,w.h-2);
-      // Brick lines
+      // Wall — tinted per level
+      let wFill = currentLevel===3?'#220500':currentLevel===2?'#001822':'#220700';
+      let wTop  = currentLevel===3?'#3a0d00':currentLevel===2?'#002a3a':'#3a1200';
+      let wBot  = currentLevel===3?'#180200':currentLevel===2?'#001018':'#180400';
+      let wLine = currentLevel===3?'#ff6600':currentLevel===2?'#44aaff':'#ff4400';
+      ctx.fillStyle=wFill;ctx.fillRect(w.x,w.y,w.w,w.h);
+      ctx.fillStyle=wTop;ctx.fillRect(w.x,w.y,w.w,5);
+      ctx.fillStyle=wBot;ctx.fillRect(w.x,w.y+w.h-4,w.w,4);
+      ctx.strokeStyle=wLine;ctx.lineWidth=2;ctx.strokeRect(w.x+1,w.y+1,w.w-2,w.h-2);
       ctx.strokeStyle='#150300';ctx.lineWidth=1;
       if(w.w>50){for(let bx=w.x+20;bx<w.x+w.w-8;bx+=40){ctx.beginPath();ctx.moveTo(bx,w.y+2);ctx.lineTo(bx,w.y+w.h-2);ctx.stroke();}}
       if(w.h>50){for(let by=w.y+20;by<w.y+w.h-8;by+=40){ctx.beginPath();ctx.moveTo(w.x+2,by);ctx.lineTo(w.x+w.w-2,by);ctx.stroke();}}
@@ -402,7 +549,11 @@ function render(){
   ctx.globalAlpha=1;
 
   // Enemies
-  enemies.forEach(e=>drawEnemy(e));
+  enemies.forEach(e=>{
+    let newTypes=['jayj2','jayj3','guard2','guard3','chillyjayj','infernojayj'];
+    if(newTypes.includes(e.type)) drawEnemyExtra(e);
+    else drawEnemy(e);
+  });
 
   // Bullets
   for(let b of bullets){
@@ -421,16 +572,20 @@ function render(){
   ctx.restore();
 
   // Boss HP bar (on-screen)
-  if(state==='boss'&&boss&&enemies.includes(boss)){
+  let isBossState = state==='boss'||state==='boss2'||state==='boss3';
+  if(isBossState&&boss&&enemies.includes(boss)){
     let bw=VW-100,bh=20,bx=50,by=VH-38;
+    let bossName = boss.type==='chillyjayj'?'🧊 CHILLY JAYJ':boss.type==='infernojayj'?'🔥 INFERNO JAYJ':'💀 MEGA JAYJ';
+    let bossBarColor1 = boss.type==='chillyjayj'?'#44aaff':boss.type==='infernojayj'?'#ff6600':'#ff00ff';
+    let bossBarColor2 = boss.type==='chillyjayj'?'#88eeff':boss.type==='infernojayj'?'#ff2200':'#ff2200';
     ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(bx-5,by-5,bw+10,bh+10);
     ctx.fillStyle='#330000';ctx.fillRect(bx,by,bw,bh);
     let frac=Math.max(0,boss.hp/boss.maxHp);
-    let gr=ctx.createLinearGradient(bx,0,bx+bw,0);gr.addColorStop(0,'#ff00ff');gr.addColorStop(1,'#ff2200');
+    let gr=ctx.createLinearGradient(bx,0,bx+bw,0);gr.addColorStop(0,bossBarColor1);gr.addColorStop(1,bossBarColor2);
     ctx.fillStyle=gr;ctx.fillRect(bx,by,bw*frac,bh);
-    ctx.strokeStyle=boss.rage?'#ff00ff':'#cc44cc';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+    ctx.strokeStyle=boss.rage?bossBarColor1:'#cc44cc';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
     ctx.fillStyle='#fff';ctx.font='bold 12px "Black Ops One"';ctx.textAlign='center';
-    ctx.fillText('💀 MEGA JAYJ  '+Math.ceil(boss.hp)+' / '+boss.maxHp,bx+bw/2,by+14);
+    ctx.fillText(bossName+'  '+Math.ceil(boss.hp)+' / '+boss.maxHp,bx+bw/2,by+14);
   }
 
   ctx.restore();
@@ -501,16 +656,137 @@ function drawEnemy(e){
   }
   ctx.restore();
 }
+
+function drawEnemyExtra(e){
+  // Level 2 & 3 enemies and bosses drawn here
+  if(e.x+120<camX||e.x-120>camX+VW||e.y+120<camY||e.y-120>camY+VH)return;
+  ctx.save();ctx.translate(e.x,e.y);
+  let wb=Math.sin(e.wobble)*3;
+
+  if(e.type==='jayj2'){
+    // Ice-blue fast Jayj
+    ctx.fillStyle=e.hurtTimer>0?'#fff':'#1155aa';ctx.beginPath();ctx.arc(wb,0,18,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#44ccff';ctx.lineWidth=2;ctx.stroke();
+    // Ice shards crown
+    ctx.strokeStyle='#88eeff';ctx.lineWidth=1.5;
+    for(let s=0;s<6;s++){let a=(s/6)*Math.PI*2;ctx.beginPath();ctx.moveTo(wb+Math.cos(a)*18,Math.sin(a)*18);ctx.lineTo(wb+Math.cos(a)*26,Math.sin(a)*26);ctx.stroke();}
+    ctx.fillStyle='#cceeff';ctx.beginPath();ctx.arc(wb,-2,12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-4,-4,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+4,-4,2,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#1155aa';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(wb,3,5,0.3,Math.PI-0.3);ctx.stroke();
+    ctx.font='bold 9px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#88ccff';ctx.fillText('JAYJ',wb,30);
+    drawHPBar(wb,33,40,5,e.hp/e.maxHp,'#44aaff');
+
+  }else if(e.type==='jayj3'){
+    // Lava-red tanky Jayj
+    ctx.fillStyle=e.hurtTimer>0?'#fff':'#aa2200';ctx.beginPath();ctx.arc(wb,0,20,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff6600';ctx.lineWidth=2;ctx.stroke();
+    // Flame aura
+    ctx.fillStyle='#ff440033';ctx.beginPath();ctx.arc(wb,0,28,0,Math.PI*2);ctx.fill();
+    // Lava cracks
+    ctx.strokeStyle='#ff6600';ctx.lineWidth=1;
+    for(let c=0;c<4;c++){let a=(c/4)*Math.PI*2+frameCount*0.02;ctx.beginPath();ctx.moveTo(wb,0);ctx.lineTo(wb+Math.cos(a)*18,Math.sin(a)*18);ctx.stroke();}
+    ctx.fillStyle='#ffd090';ctx.beginPath();ctx.arc(wb,-2,13,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-4,-4,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+4,-4,2.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff2200';ctx.lineWidth=2;ctx.beginPath();ctx.arc(wb,3,6,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.font='bold 9px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#ff8866';ctx.fillText('JAYJ',wb,33);
+    drawHPBar(wb,36,44,5,e.hp/e.maxHp,'#ff6600');
+
+  }else if(e.type==='guard2'){
+    // Ice Guard
+    ctx.fillStyle=e.hurtTimer>0?'#fff':'#224488';ctx.beginPath();ctx.arc(wb,0,28,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#44aaff';ctx.lineWidth=3;ctx.stroke();
+    // Ice crystal spikes
+    ctx.strokeStyle='#88eeff';ctx.lineWidth=2;
+    for(let s=0;s<8;s++){let a=(s/8)*Math.PI*2;ctx.beginPath();ctx.moveTo(wb+Math.cos(a)*28,Math.sin(a)*28);ctx.lineTo(wb+Math.cos(a)*38,Math.sin(a)*38);ctx.stroke();}
+    ctx.fillStyle='#cceeff';ctx.beginPath();ctx.arc(wb,-3,19,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-6,-6,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+6,-6,3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#224488';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(wb-9,-12);ctx.lineTo(wb-3,-9);ctx.stroke();ctx.beginPath();ctx.moveTo(wb+9,-12);ctx.lineTo(wb+3,-9);ctx.stroke();
+    ctx.beginPath();ctx.arc(wb,5,8,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.fillStyle='#44aaff';ctx.fillRect(wb-12,14,24,14);ctx.fillStyle='#000';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.fillText('GUARD',wb,24);
+    ctx.font='bold 10px "Black Ops One"';ctx.fillStyle='#88ccff';ctx.fillText('ICE GUARD',wb,44);
+    drawHPBar(wb,48,70,8,e.hp/e.maxHp,'#44aaff');
+
+  }else if(e.type==='guard3'){
+    // Lava Guard
+    ctx.fillStyle=e.hurtTimer>0?'#fff':'#882200';ctx.beginPath();ctx.arc(wb,0,30,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff6600';ctx.lineWidth=3;ctx.stroke();
+    // Lava glow
+    let lg=ctx.createRadialGradient(wb,0,20,wb,0,40);lg.addColorStop(0,'#ff440033');lg.addColorStop(1,'transparent');
+    ctx.fillStyle=lg;ctx.beginPath();ctx.arc(wb,0,40,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffd090';ctx.beginPath();ctx.arc(wb,-3,20,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff2200';ctx.beginPath();ctx.arc(wb-7,-7,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+7,-7,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-7,-6,2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+7,-6,2.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff4400';ctx.lineWidth=3;ctx.beginPath();ctx.arc(wb,5,10,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.fillStyle='#ff6600';ctx.fillRect(wb-14,16,28,15);ctx.fillStyle='#000';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.fillText('GUARD',wb,26);
+    ctx.font='bold 10px "Black Ops One"';ctx.fillStyle='#ff8844';ctx.fillText('LAVA GUARD',wb,48);
+    drawHPBar(wb,52,74,8,e.hp/e.maxHp,'#ff6600');
+
+  }else if(e.type==='chillyjayj'){
+    // CHILLY JAYJ boss
+    let sc=e.rage?1+Math.sin(frameCount*0.18)*0.06:1;ctx.scale(sc,sc);
+    // Blizzard aura
+    let aura=ctx.createRadialGradient(0,0,0,0,0,95);
+    aura.addColorStop(0,e.rage?'#88eeff55':'#44aaff22');aura.addColorStop(1,'transparent');
+    ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,95,0,Math.PI*2);ctx.fill();
+    // Rotating ice shards
+    ctx.strokeStyle=e.rage?'#ffffff':'#88eeff';ctx.lineWidth=3;
+    for(let s=0;s<8;s++){let a=(s/8)*Math.PI*2+frameCount*0.04;ctx.beginPath();ctx.moveTo(Math.cos(a)*46,Math.sin(a)*46);ctx.lineTo(Math.cos(a)*60,Math.sin(a)*60);ctx.stroke();}
+    ctx.fillStyle=e.hurtTimer>0?'#fff':(e.rage?'#0066cc':'#1144aa');
+    ctx.beginPath();ctx.arc(wb,0,44,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=e.rage?'#ffffff':'#44aaff';ctx.lineWidth=5;ctx.stroke();
+    ctx.fillStyle='#cceeff';ctx.beginPath();ctx.arc(wb,-6,30,0,Math.PI*2);ctx.fill();
+    // Icy eyes
+    ctx.fillStyle=e.rage?'#ffffff':'#0099ff';
+    ctx.beginPath();ctx.arc(wb-10,-12,6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+10,-12,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-10,-11,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+10,-11,3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.arc(wb,4,13,Math.PI+0.3,-0.3);ctx.stroke();// frown
+    // Ice crown spikes
+    ctx.fillStyle='#88eeff';
+    for(let s=0;s<5;s++){let a=(-0.5+(s/4))*1.2-Math.PI/2;ctx.beginPath();ctx.moveTo(wb+Math.cos(a)*44,Math.sin(a)*44);ctx.lineTo(wb+Math.cos(a)*62,Math.sin(a)*62);ctx.lineTo(wb+Math.cos(a+0.15)*50,Math.sin(a+0.15)*50);ctx.closePath();ctx.fill();}
+    ctx.font='bold 13px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#88eeff';ctx.shadowColor='#44aaff';ctx.shadowBlur=12;ctx.fillText('CHILLY JAYJ',0,66);ctx.shadowBlur=0;
+    drawHPBar(0,70,110,10,e.hp/e.maxHp,'#44aaff');
+
+  }else if(e.type==='infernojayj'){
+    // INFERNO JAYJ boss
+    let sc=e.rage?1+Math.sin(frameCount*0.15)*0.08:1;ctx.scale(sc,sc);
+    // Lava aura
+    let aura=ctx.createRadialGradient(0,0,0,0,0,100);
+    aura.addColorStop(0,e.rage?'#ff440066':'#ff220033');aura.addColorStop(1,'transparent');
+    ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,100,0,Math.PI*2);ctx.fill();
+    // Rotating fire balls
+    ctx.fillStyle=e.rage?'#ffcc00':'#ff4400';
+    for(let f=0;f<6;f++){let fa=(f/6)*Math.PI*2+frameCount*0.07;let fr=50+Math.sin(frameCount*0.1+f)*6;ctx.beginPath();ctx.arc(Math.cos(fa)*fr,Math.sin(fa)*fr,8+Math.sin(frameCount*0.2+f)*2,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle=e.hurtTimer>0?'#fff':(e.rage?'#cc2200':'#881100');
+    ctx.beginPath();ctx.arc(wb,0,48,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=e.rage?'#ffcc00':'#ff6600';ctx.lineWidth=5;ctx.stroke();
+    ctx.fillStyle='#ffd090';ctx.beginPath();ctx.arc(wb,-6,32,0,Math.PI*2);ctx.fill();
+    // Lava eyes
+    ctx.fillStyle=e.rage?'#ffff00':'#ff4400';
+    ctx.beginPath();ctx.arc(wb-11,-13,7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+11,-13,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-11,-12,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+11,-12,4,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff2200';ctx.lineWidth=4;ctx.beginPath();ctx.arc(wb,5,15,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.fillStyle='#fff';for(let t=-1;t<=1;t++)ctx.fillRect(wb+t*9-4,12,7,10);
+    // Flame crown
+    for(let f=0;f<12;f++){let fa=(f/12)*Math.PI*2+frameCount*0.08;ctx.fillStyle=f%2===0?'#ff4400':'#ffcc00';ctx.beginPath();ctx.arc(wb+Math.cos(fa)*52,Math.sin(fa)*52-5,9+Math.sin(frameCount*0.25+f)*3,0,Math.PI*2);ctx.fill();}
+    ctx.font='bold 13px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#ff6600';ctx.shadowColor='#ff4400';ctx.shadowBlur=14;ctx.fillText('INFERNO JAYJ',0,72);ctx.shadowBlur=0;
+    drawHPBar(0,76,120,10,e.hp/e.maxHp,'#ff6600');
+  }
+  ctx.restore();
+}
 function drawHPBar(x,y,w,h,frac,color){ctx.fillStyle='#220000';ctx.fillRect(x-w/2,y,w,h);ctx.fillStyle=color;ctx.fillRect(x-w/2,y,w*Math.max(0,frac),h);}
 
 function renderMinimap(){
-  if(state!=='level1'&&state!=='boss')return;
+  if(!isPlaying())return;
   mctx.fillStyle='#080000';mctx.fillRect(0,0,120,80);
   let sx=120/WORLD_W,sy=80/WORLD_H;
   mctx.fillStyle='#3d1000';
   for(let w of walls){if(w.isBossGate&&gateOpen)continue;mctx.fillRect(w.x*sx,w.y*sy,Math.max(1,w.w*sx),Math.max(1,w.h*sy));}
   if(!gateOpen&&bossGateDef){mctx.fillStyle='#ff8800';mctx.fillRect(bossGateDef.x*sx,bossGateDef.y*sy,Math.max(2,bossGateDef.w*sx),Math.max(1,bossGateDef.h*sy));}
-  for(let e of enemies){mctx.fillStyle=e.type==='megajayj'?'#ff00ff':e.isGuard?'#ff8800':'#ff4400';mctx.fillRect(e.x*sx-2,e.y*sy-2,4,4);}
+  for(let e of enemies){
+    let col = (e.type==='megajayj')?'#ff00ff':(e.type==='chillyjayj')?'#88eeff':(e.type==='infernojayj')?'#ff6600':e.isGuard?'#ff8800':(e.type==='jayj2')?'#44aaff':(e.type==='jayj3')?'#ff6600':'#ff4400';
+    mctx.fillStyle=col;mctx.fillRect(e.x*sx-2,e.y*sy-2,4,4);
+  }
   mctx.fillStyle='#44ccff';mctx.fillRect(player.x*sx-3,player.y*sy-3,6,6);
   mctx.strokeStyle='#ffffff44';mctx.lineWidth=1;mctx.strokeRect(camX*sx,camY*sy,VW*sx,VH*sy);
 }
@@ -528,13 +804,36 @@ function updateAmmoUI(){
 }
 function updateKills(){let el=document.getElementById('killCount');if(el)el.textContent='KILLS: '+kills;}
 function showMessage(msg){let el=document.getElementById('message');el.innerHTML=msg;el.style.opacity='1';msgTimer=220;}
+function showLevelComplete(){
+  running=false; state='levelcomplete'; stopMusic();
+  let nextLvl=currentLevel+1;
+  let msgs=[,'','THE FRIDGE AWAITS... 🧊','THE DEEP FRYER CALLS... 🔥'];
+  let cols=[,'#ff4400','#44aaff','#ff6600'];
+  sfx(660,'square',0.4,0.2);
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('overlay').innerHTML=`
+    <h1 style="color:#ffcc00;font-size:72px;text-shadow:0 0 30px #ffcc00">LEVEL ${currentLevel}<br>CLEARED!</h1>
+    <h2 style="font-size:22px;color:${cols[nextLvl]||'#ff4400'};letter-spacing:5px;margin-bottom:18px">${msgs[nextLvl]||''}</h2>
+    <p style="font-family:'Black Ops One',cursive;font-size:16px;color:#ffcc00;margin:8px 0">KILLS: ${kills} &nbsp;|&nbsp; SCORE: ${score}</p>
+    <button class="big-btn btn-start" style="margin-top:18px;background:${cols[nextLvl]||'#ff4400'};color:#000;box-shadow:0 0 28px ${cols[nextLvl]||'#ff4400'}" onclick="goNextLevel()">LEVEL ${nextLvl} →</button>
+    <button class="big-btn btn-sec" style="margin-top:8px" onclick="goToMenu()">MAIN MENU</button>
+  `;
+}
+function goNextLevel(){
+  document.getElementById('overlay').style.display='none';
+  currentLevel++;
+  initLevel(currentLevel);
+  state='level'+currentLevel; running=true;
+  if(musicOn) startMusic();
+  loop();
+}
 function showGameOver(){
   running=false;state='gameover';stopMusic();
   document.getElementById('overlay').style.display='flex';
   document.getElementById('overlay').innerHTML=`
     <h1 style="color:#ff0000;font-size:80px">YOU DIED</h1>
     <h2 style="color:#ff4400;font-size:24px;letter-spacing:4px;margin-bottom:18px">JAYJ WINS AGAIN</h2>
-    <p style="font-family:'Black Ops One',cursive;font-size:16px;color:#ffcc00;margin:8px 0">KILLS: ${kills} &nbsp;|&nbsp; SCORE: ${score}</p>
+    <p style="font-family:'Black Ops One',cursive;font-size:14px;color:#ff8844;margin:4px 0">LEVEL ${currentLevel} &nbsp;|&nbsp; KILLS: ${kills} &nbsp;|&nbsp; SCORE: ${score}</p>
     <button class="big-btn btn-start" style="margin-top:18px;background:#ff2200;color:#fff;box-shadow:0 0 28px #ff2200" onclick="startGame()">TRY AGAIN</button>
     <button class="big-btn btn-sec" style="margin-top:8px" onclick="goToMenu()">MAIN MENU</button>
   `;
@@ -543,10 +842,10 @@ function showWin(){
   running=false;state='win';stopMusic();sfx(880,'square',0.8,0.3);
   document.getElementById('overlay').style.display='flex';
   document.getElementById('overlay').innerHTML=`
-    <h1 style="color:#ffcc00;font-size:72px">VICTORY!</h1>
-    <h2 style="color:#ff4400;font-size:24px;letter-spacing:4px;margin-bottom:18px">MEGA JAYJ DESTROYED!</h2>
-    <p style="font-family:'Black Ops One',cursive;font-size:16px;color:#ffcc00;margin:8px 0">🍔 BURGERS FIRED: MANY 🍔</p>
-    <p style="font-family:'Black Ops One',cursive;font-size:14px;color:#ff8844">KILLS: ${kills} &nbsp;|&nbsp; SCORE: ${score+1000}</p>
+    <h1 style="color:#ffcc00;font-size:72px">YOU WIN!</h1>
+    <h2 style="color:#ff4400;font-size:24px;letter-spacing:4px;margin-bottom:18px">ALL 3 BOSSES DESTROYED!</h2>
+    <p style="font-family:'Black Ops One',cursive;font-size:16px;color:#ffcc00;margin:8px 0">🍔 MEGA JAYJ... CHILLY JAYJ... INFERNO JAYJ... ALL DOWN! 🍔</p>
+    <p style="font-family:'Black Ops One',cursive;font-size:14px;color:#ff8844">KILLS: ${kills} &nbsp;|&nbsp; FINAL SCORE: ${score+2000}</p>
     <button class="big-btn btn-start" style="margin-top:18px;background:#ffcc00;color:#000;box-shadow:0 0 28px #ffcc00" onclick="startGame()">PLAY AGAIN</button>
     <button class="big-btn btn-sec" style="margin-top:8px" onclick="goToMenu()">MAIN MENU</button>
   `;
@@ -555,7 +854,7 @@ function showWin(){
 // ── INPUT ──
 document.addEventListener('keydown',e=>{
   keys[e.key.toLowerCase()]=true;
-  if(e.key.toLowerCase()==='r'&&!reloading&&ammo<maxAmmo&&(state==='level1'||state==='boss')){reloading=true;reloadTimer=90;document.getElementById('reloadMsg').style.display='block';sfx(200,'square',0.25,0.08);}
+  if(e.key.toLowerCase()==='r'&&!reloading&&ammo<maxAmmo&&isPlaying()){reloading=true;reloadTimer=90;document.getElementById('reloadMsg').style.display='block';sfx(200,'square',0.25,0.08);}
   if(e.key.toLowerCase()==='m')toggleMusic();
   if(e.key==='Escape')goToMenu();
 });
@@ -568,7 +867,7 @@ canvas.addEventListener('mousemove',e=>{
 });
 
 canvas.addEventListener('click',e=>{
-  if(state!=='level1'&&state!=='boss')return;
+  if(!isPlaying())return;
   if(reloading){showMessage('RELOADING! WAIT...');return;}
   if(ammo<=0){showMessage('🍔 NO BURGERS! PRESS R!');return;}
   let rect=canvas.getBoundingClientRect();
@@ -663,7 +962,7 @@ const _origUpdate = update;
 // Touch auto-shoot: fires while right finger held
 function touchShootTick(){
   if(!running) return;
-  if(aimTouch.active && (state==='level1'||state==='boss')){
+  if(aimTouch.active && (state==='level1'||state==='boss'||state==='level2'||state==='boss2'||state==='level3'||state==='boss3')){
     if(shootCooldown<=0){
       if(!reloading && ammo>0){
         let angle=Math.atan2(mouseWY-player.y, mouseWX-player.x);
@@ -687,7 +986,7 @@ requestAnimationFrame(touchShootTick);
 // Draw virtual joystick on canvas (called at end of render)
 function drawTouchControls(){
   if(!('ontouchstart' in window)) return;
-  if(state!=='level1'&&state!=='boss') return;
+  if(!isPlaying()) return;
 
   // Left joystick base position (default when not active)
   let bx=joystick.active?joystick.baseX:VW*0.18;
