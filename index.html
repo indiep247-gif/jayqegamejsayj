@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JAYQE - The Burger Blaster</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Black+Ops+One&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0000; color:#ff4400; font-family:'Black Ops One',cursive; overflow:hidden; user-select:none; touch-action:none; }
+  #gameCanvas { display:block; margin:0 auto; cursor:none; border:2px solid #ff4400; box-shadow:0 0 40px #ff4400aa,0 0 80px #ff220055; touch-action:none; }
+  #ui { position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 16px; pointer-events:none; z-index:10; }
+  .ui-panel { background:rgba(0,0,0,0.82); border:2px solid #ff4400; padding:7px 14px; font-size:17px; color:#ffcc00; text-shadow:0 0 8px #ff4400; letter-spacing:2px; }
+  #hpBar { height:12px; background:#ff4400; box-shadow:0 0 8px #ff4400; transition:width 0.1s; margin-top:4px; }
+  #hpBg { width:175px; height:12px; background:#330000; border:1px solid #ff4400; }
+  #overlay { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100; font-family:'Bebas Neue',cursive; }
+  #overlay h1 { font-size:88px; color:#ff4400; text-shadow:0 0 30px #ff4400,0 0 60px #ff2200; letter-spacing:12px; animation:flicker 1.5s infinite; }
+  #overlay h2 { font-size:28px; color:#ffcc00; letter-spacing:6px; margin-bottom:28px; text-shadow:0 0 10px #ffcc00; }
+  #overlay p { font-family:'Black Ops One',cursive; font-size:13px; color:#ff8844; margin:4px 0; letter-spacing:2px; text-align:center; }
+  .big-btn { padding:15px 52px; font-family:'Bebas Neue',cursive; font-size:36px; letter-spacing:6px; border:none; cursor:pointer; transition:all 0.12s; display:block; margin:7px 0; }
+  .btn-start { background:#ff4400; color:#000; box-shadow:0 0 28px #ff4400; }
+  .btn-start:hover { background:#ffcc00; box-shadow:0 0 48px #ffcc00; transform:scale(1.05); }
+  .btn-sec { background:#1a0000; color:#ff4400; border:2px solid #ff4400; font-size:22px; padding:10px 36px; letter-spacing:4px; }
+  .btn-sec:hover { background:#ff4400; color:#000; }
+  #message { position:fixed; bottom:68px; left:50%; transform:translateX(-50%); font-size:20px; color:#ffcc00; text-shadow:0 0 16px #ffcc00; letter-spacing:3px; z-index:20; pointer-events:none; opacity:0; transition:opacity 0.3s; text-align:center; white-space:nowrap; }
+  #crosshair { position:fixed; pointer-events:none; z-index:50; transform:translate(-50%,-50%); font-size:24px; color:#ff4400; text-shadow:0 0 8px #ff4400; }
+  @keyframes flicker { 0%,100%{opacity:1} 50%{opacity:0.68} 75%{opacity:0.9} }
+  #ammoBar { display:flex; gap:3px; margin-top:4px; flex-wrap:wrap; max-width:100px; }
+  .ammo-dot { width:11px; height:11px; border-radius:50%; background:#ffcc00; box-shadow:0 0 5px #ffcc00; }
+  .ammo-dot.empty { background:#330000; box-shadow:none; }
+  #reloadMsg { color:#ff4400; font-size:12px; margin-top:3px; display:none; animation:flicker 0.4s infinite; }
+  #menuBtn { position:fixed; bottom:12px; right:14px; z-index:20; }
+  #musicBtn { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); z-index:20; background:rgba(0,0,0,0.8); border:1px solid #ff4400; color:#ffcc00; font-family:'Black Ops One',cursive; font-size:11px; padding:5px 12px; cursor:pointer; letter-spacing:1px; }
+  #minimap { position:fixed; bottom:12px; left:14px; z-index:20; border:2px solid #ff4400; background:rgba(0,0,0,0.7); }
+</style>
+</head>
+<body>
+<div id="overlay">
+  <h1>JAYQE</h1>
+  <h2>THE BURGER BLASTER</h2>
+  <p>🍔 WASD — MOVE &nbsp;|&nbsp; MOUSE — AIM &nbsp;|&nbsp; CLICK — SHOOT &nbsp;|&nbsp; R — RELOAD</p>
+  <p>📱 TOUCH: LEFT SIDE = MOVE JOYSTICK &nbsp;|&nbsp; RIGHT SIDE = AIM + SHOOT</p>
+  <p>🚪 KILL THE GUARD → UNLOCK BOSS GATE → DEFEAT MEGA JAYJ</p>
+  <p>M — MUSIC &nbsp;|&nbsp; ESC — MENU</p>
+  <br>
+  <button class="big-btn btn-start" id="startBtn" onclick="startGame()">LOCK AND LOAD</button>
+</div>
+<div id="ui">
+  <div class="ui-panel">HP<br><div id="hpBg"><div id="hpBar" style="width:100%"></div></div><div style="font-size:11px;margin-top:2px;color:#ff8844" id="hpNum">100</div></div>
+  <div class="ui-panel" style="text-align:center" id="waveInfo">LEVEL 1<br><span id="killCount" style="color:#ff4400">KILLS: 0</span></div>
+  <div class="ui-panel" style="text-align:right">🍔 BURGERS<br><div id="ammoBar"></div><div id="reloadMsg">RELOADING...</div></div>
+</div>
+<div id="message"></div>
+<div id="crosshair">✛</div>
+<div id="menuBtn"><button class="btn-sec" onclick="goToMenu()">☰ MENU</button></div>
+<button id="musicBtn" onclick="toggleMusic()">🎵 MUSIC: ON</button>
+<canvas id="minimap" width="120" height="80"></canvas>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+// ── CANVAS ──
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const mm = document.getElementById('minimap');
+const mctx = mm.getContext('2d');
+const VW = Math.min(window.innerWidth, 900);
+const VH = Math.min(window.innerHeight, 600);
+canvas.width = VW; canvas.height = VH;
+const WORLD_W = 2400, WORLD_H = 1800;
+let camX = 0, camY = 0;
+
+// ── AUDIO ──
+let audioCtx = null, musicOn = true, musicNodes = [], musicInterval = null;
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+function toggleMusic() {
+  musicOn = !musicOn;
+  document.getElementById('musicBtn').textContent = '🎵 MUSIC: '+(musicOn?'ON':'OFF');
+  if (musicOn) startMusic(); else stopMusic();
+}
+function stopMusic() {
+  musicNodes.forEach(n=>{ try{n.stop();}catch(e){} }); musicNodes=[];
+  if (musicInterval) { clearInterval(musicInterval); musicInterval=null; }
+}
+function startMusic() {
+  if (!audioCtx) return; stopMusic();
+  const bpm=165, beat=60/bpm;
+  const bassLine=[0,0,7,0,5,5,12,5,3,3,10,3,2,2,9,2];
+  const leadLine=[12,15,17,19,17,15,12,15,19,17,15,12,15,17,19,22];
+  const arpLine =[24,28,31,28,26,24,26,28,31,28,24,26,28,31,26,24];
+  const base=110;
+  let step=0;
+  function semi(f,s){return f*Math.pow(2,s/12);}
+  function note(freq,type,gain,start,dur){
+    if(!audioCtx||!musicOn)return;
+    try{
+      let o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq,start);
+      g.gain.setValueAtTime(gain,start); g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(start); o.stop(start+dur+0.05); musicNodes.push(o);
+    }catch(e){}
+  }
+  function tick(){
+    if(!audioCtx||!musicOn)return;
+    let now=audioCtx.currentTime, si=step%bassLine.length;
+    note(semi(base,bassLine[si]),'square',0.14,now,beat*0.88);
+    note(semi(base*4,leadLine[si]),'square',0.07,now+beat*0.5,beat*0.38);
+    note(semi(base*8,arpLine[si]),'triangle',0.05,now+beat*0.25,beat*0.2);
+    if(si%4===0) note(55,'sawtooth',0.2,now,beat*0.13);
+    if(si%4===2) note(160+Math.random()*80,'sawtooth',0.09,now,beat*0.09);
+    step++;
+  }
+  musicInterval=setInterval(tick,beat*1000); tick();
+}
+function sfx(freq,type,dur,vol){
+  if(!audioCtx)return;
+  try{
+    let o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type||'square'; o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(freq*0.25,audioCtx.currentTime+dur);
+    g.gain.setValueAtTime(vol||0.12,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur+0.05);
+  }catch(e){}
+}
+
+// ── WALLS ──
+let walls=[]; let bossGateDef=null;
+function buildMap(){
+  walls=[];
+  const T=40;
+  function r(x,y,w,h,opt={}){walls.push({x,y,w,h,...opt});}
+  // Outer border
+  r(0,0,WORLD_W,T); r(0,WORLD_H-T,WORLD_W,T); r(0,0,T,WORLD_H); r(WORLD_W-T,0,T,WORLD_H);
+  // Boss gate wall strip
+  bossGateDef={x:WORLD_W-T*7,y:T,w:T,h:WORLD_H-T*2};
+  r(bossGateDef.x,bossGateDef.y,bossGateDef.w,bossGateDef.h,{isBossGate:true});
+  // Left area corridors
+  r(T*2,T*8,T*6,T*2); r(T*2,T*24,T*6,T*2);
+  r(T*6,T*10,T*2,T*14);
+  r(T*4,T*4,T*2,T*10); r(T*4,T*18,T*2,T*8); r(T*4,T*30,T*2,T*12);
+  // Top/bottom connectors
+  r(T*10,T*2,T*8,T*2); r(T*10,T*14,T*8,T*2); r(T*10,T*4,T*2,T*6);
+  r(T*10,T*38,T*10,T*2); r(T*22,T*36,T*2,T*4); r(T*6,T*36,T*8,T*2);
+  // Central maze
+  r(T*12,T*6,T*4,T*2); r(T*12,T*14,T*4,T*2);
+  r(T*18,T*6,T*2,T*10); r(T*22,T*4,T*2,T*8); r(T*22,T*16,T*2,T*8);
+  r(T*14,T*20,T*6,T*2); r(T*12,T*24,T*4,T*2); r(T*18,T*22,T*4,T*2);
+  r(T*16,T*30,T*8,T*2); r(T*14,T*34,T*2,T*6); r(T*20,T*34,T*6,T*2);
+  r(T*28,T*4,T*2,T*6); r(T*28,T*18,T*2,T*8); r(T*26,T*28,T*4,T*2);
+  // Right side rooms
+  r(T*32,T*6,T*8,T*2); r(T*32,T*14,T*8,T*2); r(T*38,T*8,T*2,T*6);
+  r(T*32,T*22,T*8,T*2); r(T*32,T*30,T*8,T*2); r(T*38,T*24,T*2,T*6);
+  r(T*42,T*4,T*4,T*2); r(T*42,T*14,T*4,T*2); r(T*44,T*6,T*2,T*8);
+  r(T*42,T*28,T*4,T*2); r(T*42,T*36,T*4,T*2); r(T*44,T*30,T*2,T*6);
+  r(T*48,T*8,T*2,T*6); r(T*48,T*22,T*2,T*8); r(T*50,T*10,T*4,T*2); r(T*50,T*28,T*4,T*2);
+  // Pillars
+  [[15,10],[20,10],[15,26],[20,26],[25,12],[25,22],[8,18],[30,18],[35,18],[40,12],[40,26],[44,8],[44,20],[44,30],[6,36],[24,36],[34,10],[34,26],[46,16],[52,16],[10,32],[28,34]].forEach(([tx,ty])=>r(T*tx,T*ty,T*2,T*2));
+}
+function activeWalls(){return walls.filter(w=>!(w.isBossGate&&gateOpen));}
+function aabb(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
+function resolveWall(ent,nx,ny){
+  let r2=ent.w/2;
+  let ex=nx-r2,ey=ny-r2,ew=ent.w,eh=ent.h;
+  for(let w of activeWalls()){
+    if(aabb(ex,ey,ew,eh,w.x,w.y,w.w,w.h)){
+      let oL=(ex+ew)-w.x,oR=(w.x+w.w)-ex,oT=(ey+eh)-w.y,oB=(w.y+w.h)-ey;
+      let mX=Math.min(oL,oR),mY=Math.min(oT,oB);
+      if(mX<mY){nx+=(oL<oR?-oL:oR);}else{ny+=(oT<oB?-oT:oB);}
+      ex=nx-r2;ey=ny-r2;
+    }
+  }
+  return {x:nx,y:ny};
+}
+
+// ── STATE ──
+let state='menu',running=false;
+let player,enemies,bullets,particles;
+let mouseWX=0,mouseWY=0,mouseScX=VW/2,mouseScY=VH/2;
+let keys={},score=0,kills=0;
+let ammo=6,maxAmmo=6,reloading=false,reloadTimer=0;
+let guardDead=false,gateOpen=false,boss=null;
+let frameCount=0,shakeTimer=0,shakeMag=0,msgTimer=0;
+
+// ── INIT ──
+function goToMenu(){
+  running=false; state='menu'; stopMusic();
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('overlay').innerHTML=`
+    <h1>JAYQE</h1>
+    <h2 style="font-size:28px;color:#ffcc00;letter-spacing:6px;margin-bottom:28px;text-shadow:0 0 10px #ffcc00">THE BURGER BLASTER</h2>
+    <p style="font-family:'Black Ops One',cursive;font-size:13px;color:#ff8844;margin:4px 0;letter-spacing:2px">🍔 WASD MOVE | MOUSE AIM | CLICK SHOOT | R RELOAD | M MUSIC | ESC MENU</p>
+    <p style="font-family:'Black Ops One',cursive;font-size:13px;color:#ff8844;margin:4px 0;letter-spacing:2px">🚪 KILL THE GUARD → UNLOCK BOSS GATE → DEFEAT MEGA JAYJ</p>
+    <br>
+    <button class="big-btn btn-start" onclick="startGame()">LOCK AND LOAD</button>
+  `;
+}
+function startGame(){
+  initAudio();
+  document.getElementById('overlay').style.display='none';
+  init(); state='level1'; running=true;
+  if(musicOn) startMusic();
+  loop();
+}
+function init(){
+  kills=0;score=0;guardDead=false;gateOpen=false;boss=null;
+  ammo=maxAmmo;reloading=false;particles=[];bullets=[];frameCount=0;
+  buildMap();
+  player={x:200,y:300,w:36,h:36,hp:100,maxHp:100,speed:3.8,invincible:0};
+  enemies=[
+    mkGuard(WORLD_W-360,WORLD_H/2),
+    mkJayj(500,300),mkJayj(700,600),mkJayj(900,250),
+    mkJayj(400,1100),mkJayj(1100,800),mkJayj(800,1400),
+    mkJayj(1500,500),mkJayj(1200,1200),mkJayj(600,900),
+  ];
+  updateAmmoUI();
+  document.getElementById('waveInfo').innerHTML='LEVEL 1<br><span id="killCount" style="color:#ff4400">KILLS: 0</span>';
+  updateHPBar();
+}
+function mkJayj(x,y){return{x,y,w:40,h:40,hp:35,maxHp:35,speed:1.5+Math.random()*0.9,type:'jayj',angle:0,shootTimer:80+Math.random()*80,hurtTimer:0,wobble:Math.random()*Math.PI*2};}
+function mkGuard(x,y){return{x,y,w:60,h:60,hp:130,maxHp:130,speed:0.6,type:'guard',isGuard:true,angle:0,shootTimer:75,hurtTimer:0,wobble:0};}
+function mkMega(){return{x:WORLD_W-220,y:WORLD_H/2,w:100,h:100,hp:600,maxHp:600,speed:2.0,type:'megajayj',boss:true,angle:0,shootTimer:28,hurtTimer:0,wobble:0,rage:false};}
+
+// ── LOOP ──
+function loop(){
+  if(!running)return;
+  requestAnimationFrame(loop);
+  if(state!=='level1'&&state!=='boss')return;
+  frameCount++;update();render();renderMinimap();
+}
+
+// ── UPDATE ──
+function update(){
+  // Player move (keyboard + virtual joystick)
+  let dx=0,dy=0;
+  if(keys['w']||keys['arrowup'])dy-=1;
+  if(keys['s']||keys['arrowdown'])dy+=1;
+  if(keys['a']||keys['arrowleft'])dx-=1;
+  if(keys['d']||keys['arrowright'])dx+=1;
+  if(joystick.active){ dx=joystick.dx; dy=joystick.dy; }
+  else if(dx&&dy){dx*=0.707;dy*=0.707;}
+  let nr=resolveWall(player,player.x+dx*player.speed,player.y+dy*player.speed);
+  player.x=nr.x;player.y=nr.y;
+  if(player.invincible>0)player.invincible--;
+
+  // Camera
+  camX=Math.max(0,Math.min(WORLD_W-VW,player.x-VW/2));
+  camY=Math.max(0,Math.min(WORLD_H-VH,player.y-VH/2));
+  mouseWX=mouseScX+camX; mouseWY=mouseScY+camY;
+
+  // Reload
+  if(reloading){reloadTimer--;if(reloadTimer<=0){ammo=maxAmmo;reloading=false;document.getElementById('reloadMsg').style.display='none';updateAmmoUI();}}
+  if(shakeTimer>0)shakeTimer--;
+
+  // Enemies
+  for(let i=enemies.length-1;i>=0;i--){
+    let e=enemies[i];
+    if(e.hurtTimer>0)e.hurtTimer--;
+    e.wobble+=0.07;
+    let tx=player.x-e.x,ty=player.y-e.y;
+    let dist=Math.sqrt(tx*tx+ty*ty);
+    e.angle=Math.atan2(ty,tx);
+
+    if(e.isGuard){
+      let gx=WORLD_W-360-e.x,gy=WORLD_H/2+Math.sin(frameCount*0.014)*220-e.y;
+      let gd=Math.sqrt(gx*gx+gy*gy);
+      if(gd>2){let r2=resolveWall(e,e.x+(gx/gd)*e.speed,e.y+(gy/gd)*e.speed);e.x=r2.x;e.y=r2.y;}
+    }else{
+      if(dist>1){let r2=resolveWall(e,e.x+(tx/dist)*e.speed,e.y+(ty/dist)*e.speed);e.x=r2.x;e.y=r2.y;}
+    }
+    if(e.type==='megajayj'&&e.hp<220&&!e.rage){e.rage=true;e.speed=3.8;showMessage('⚠ MEGA JAYJ ENRAGED! ⚠');}
+
+    // Shoot
+    e.shootTimer--;
+    if(e.shootTimer<=0){
+      if(e.type==='megajayj'){
+        e.shootTimer=e.rage?16:28;
+        let sp=e.rage?5:3;
+        for(let s=0;s<sp;s++){mkBullet(e.x,e.y,e.angle+(s-(sp-1)/2)*0.22,false,e.rage?14:10);}
+      }else if(e.isGuard){
+        e.shootTimer=65; mkBullet(e.x,e.y,e.angle,false,13);
+      }else{
+        e.shootTimer=90+Math.random()*60; mkBullet(e.x,e.y,e.angle,false,8);
+      }
+    }
+
+    // Touch dmg
+    if(dist<(e.w/2+player.w/2)&&player.invincible<=0){
+      let dmg=e.type==='megajayj'?16:6;
+      player.hp-=dmg;player.invincible=50;shakeTimer=14;shakeMag=7;
+      spawnPfx(player.x,player.y,'#ff4400',10);updateHPBar();sfx(100,'sawtooth',0.2,0.15);
+    }
+
+    // Death
+    if(e.hp<=0){
+      spawnPfx(e.x,e.y,e.type==='megajayj'?'#ff00ff':e.isGuard?'#ff8800':'#ff4400',24);
+      if(e.isGuard){
+        guardDead=true;gateOpen=true;
+        walls=walls.filter(w=>!w.isBossGate);
+        boss=mkMega();enemies.push(boss);state='boss';
+        document.getElementById('waveInfo').innerHTML='⚠ BOSS ⚠<br><span style="color:#ff00ff">MEGA JAYJ</span>';
+        showMessage('🔓 BOSS GATE OPEN — MEGA JAYJ IS HERE!');sfx(80,'sawtooth',0.7,0.25);
+      }else if(e.type==='megajayj'){
+        spawnPfx(e.x,e.y,'#ffcc00',70);enemies.splice(i,1);
+        setTimeout(()=>showWin(),900);return;
+      }else{kills++;score+=100;sfx(320,'square',0.12,0.1);updateKills();}
+      enemies.splice(i,1);continue;
+    }
+  }
+
+  // Periodic spawns
+  if(state==='level1'&&frameCount%380===0){
+    let ct=enemies.filter(e=>!e.isGuard).length;
+    if(ct<12){let sp=[[500,1500],[1200,350],[850,1050],[1600,800],[350,650]];let p=sp[Math.floor(Math.random()*sp.length)];enemies.push(mkJayj(p[0],p[1]));}
+  }
+
+  // Bullets
+  for(let i=bullets.length-1;i>=0;i--){
+    let b=bullets[i];
+    b.x+=Math.cos(b.angle)*b.speed;b.y+=Math.sin(b.angle)*b.speed;b.life--;
+    if(b.life<=0||b.x<0||b.x>WORLD_W||b.y<0||b.y>WORLD_H){bullets.splice(i,1);continue;}
+    let wallHit=false;
+    for(let w of activeWalls()){if(b.x>w.x&&b.x<w.x+w.w&&b.y>w.y&&b.y<w.y+w.h){spawnPfx(b.x,b.y,b.fromPlayer?'#ffcc0066':'#ff440066',3);wallHit=true;break;}}
+    if(wallHit){bullets.splice(i,1);continue;}
+    if(b.fromPlayer){
+      let hit=false;
+      for(let j=enemies.length-1;j>=0;j--){
+        let e=enemies[j];
+        if(Math.abs(b.x-e.x)<e.w/2&&Math.abs(b.y-e.y)<e.h/2){
+          e.hp-=b.dmg;e.hurtTimer=10;spawnPfx(b.x,b.y,'#ffcc00',5);spawnPfx(b.x,b.y,'#ff4400',3);sfx(500+Math.random()*200,'square',0.05,0.08);hit=true;break;
+        }
+      }
+      if(hit){bullets.splice(i,1);}
+    }else{
+      if(Math.abs(b.x-player.x)<player.w/2&&Math.abs(b.y-player.y)<player.h/2&&player.invincible<=0){
+        player.hp-=b.dmg;player.invincible=30;shakeTimer=8;shakeMag=5;spawnPfx(player.x,player.y,'#ff4400',8);updateHPBar();sfx(150,'sawtooth',0.15,0.12);bullets.splice(i,1);
+      }
+    }
+  }
+
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){
+    let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.08;p.vx*=0.94;p.life--;if(p.life<=0)particles.splice(i,1);
+  }
+  if(player.hp<=0){player.hp=0;updateHPBar();showGameOver();}
+  if(msgTimer>0){msgTimer--;if(msgTimer===0)document.getElementById('message').style.opacity='0';}
+}
+function mkBullet(x,y,angle,fp,dmg){bullets.push({x,y,angle,speed:fp?9:4.2,life:fp?100:160,fromPlayer:fp,dmg});}
+function spawnPfx(x,y,color,n){for(let i=0;i<n;i++){let a=Math.random()*Math.PI*2,s=1+Math.random()*5;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*22,color,size:2+Math.random()*4});}}
+
+// ── RENDER ──
+function render(){
+  ctx.save();
+  if(shakeTimer>0)ctx.translate((Math.random()-0.5)*shakeMag,(Math.random()-0.5)*shakeMag);
+  ctx.save();ctx.translate(-camX,-camY);
+
+  // BG
+  ctx.fillStyle='#0d0000';ctx.fillRect(camX,camY,VW,VH);
+
+  // Floor tiles
+  ctx.strokeStyle='#1a0400';ctx.lineWidth=1;
+  let gx=Math.floor(camX/40)*40,gy=Math.floor(camY/40)*40;
+  for(let x=gx;x<camX+VW+40;x+=40){ctx.beginPath();ctx.moveTo(x,camY);ctx.lineTo(x,camY+VH);ctx.stroke();}
+  for(let y=gy;y<camY+VH+40;y+=40){ctx.beginPath();ctx.moveTo(camX,y);ctx.lineTo(camX+VW,y);ctx.stroke();}
+
+  // Floor tile squares (every 80px alternating)
+  ctx.fillStyle='#110200';
+  for(let x=Math.floor(camX/80)*80;x<camX+VW+80;x+=80){
+    for(let y=Math.floor(camY/80)*80;y<camY+VH+80;y+=80){
+      if(((x/80)+(y/80))%2===0)ctx.fillRect(x,y,80,80);
+    }
+  }
+
+  // Walls
+  for(let w of walls){
+    if(w.x+w.w<camX||w.x>camX+VW||w.y+w.h<camY||w.y>camY+VH)continue;
+    if(w.isBossGate&&!gateOpen){
+      ctx.fillStyle='#1a0500';ctx.fillRect(w.x,w.y,w.w,w.h);
+      ctx.strokeStyle='#ff8800';ctx.lineWidth=3;ctx.strokeRect(w.x,w.y,w.w,w.h);
+      ctx.strokeStyle='#ff6600';ctx.lineWidth=5;
+      for(let b=0;b<w.h;b+=52){ctx.beginPath();ctx.moveTo(w.x+10,w.y+b);ctx.lineTo(w.x+10,w.y+b+36);ctx.stroke();ctx.beginPath();ctx.moveTo(w.x+30,w.y+b+16);ctx.lineTo(w.x+30,w.y+b+52);ctx.stroke();}
+      ctx.save();ctx.translate(w.x+w.w/2,w.y+w.h/2);ctx.rotate(-Math.PI/2);ctx.fillStyle='#ff8800';ctx.font='bold 14px "Black Ops One"';ctx.textAlign='center';ctx.fillText('BOSS GATE',0,5);ctx.restore();
+      // Ominous glow
+      let gl=ctx.createLinearGradient(w.x-20,0,w.x,0);gl.addColorStop(0,'transparent');gl.addColorStop(1,'#ff880033');
+      ctx.fillStyle=gl;ctx.fillRect(w.x-30,w.y,30,w.h);
+    }else if(!w.isBossGate){
+      // Wall top shadow
+      ctx.fillStyle='#220700';ctx.fillRect(w.x,w.y,w.w,w.h);
+      ctx.fillStyle='#3a1200';ctx.fillRect(w.x,w.y,w.w,5);
+      ctx.fillStyle='#180400';ctx.fillRect(w.x,w.y+w.h-4,w.w,4);
+      ctx.strokeStyle='#ff4400';ctx.lineWidth=2;ctx.strokeRect(w.x+1,w.y+1,w.w-2,w.h-2);
+      // Brick lines
+      ctx.strokeStyle='#150300';ctx.lineWidth=1;
+      if(w.w>50){for(let bx=w.x+20;bx<w.x+w.w-8;bx+=40){ctx.beginPath();ctx.moveTo(bx,w.y+2);ctx.lineTo(bx,w.y+w.h-2);ctx.stroke();}}
+      if(w.h>50){for(let by=w.y+20;by<w.y+w.h-8;by+=40){ctx.beginPath();ctx.moveTo(w.x+2,by);ctx.lineTo(w.x+w.w-2,by);ctx.stroke();}}
+    }
+  }
+
+  // Particles
+  for(let p of particles){ctx.globalAlpha=p.life/40;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+
+  // Enemies
+  enemies.forEach(e=>drawEnemy(e));
+
+  // Bullets
+  for(let b of bullets){
+    ctx.save();ctx.translate(b.x,b.y);
+    if(b.fromPlayer){
+      ctx.rotate(b.angle+frameCount*0.5);ctx.font='18px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🍔',0,0);
+    }else{
+      let g=ctx.createRadialGradient(0,0,0,0,0,7);g.addColorStop(0,'#ffff88');g.addColorStop(0.5,'#ff4400');g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,7,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Player
+  drawPlayer();
+  ctx.restore();
+
+  // Boss HP bar (on-screen)
+  if(state==='boss'&&boss&&enemies.includes(boss)){
+    let bw=VW-100,bh=20,bx=50,by=VH-38;
+    ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(bx-5,by-5,bw+10,bh+10);
+    ctx.fillStyle='#330000';ctx.fillRect(bx,by,bw,bh);
+    let frac=Math.max(0,boss.hp/boss.maxHp);
+    let gr=ctx.createLinearGradient(bx,0,bx+bw,0);gr.addColorStop(0,'#ff00ff');gr.addColorStop(1,'#ff2200');
+    ctx.fillStyle=gr;ctx.fillRect(bx,by,bw*frac,bh);
+    ctx.strokeStyle=boss.rage?'#ff00ff':'#cc44cc';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+    ctx.fillStyle='#fff';ctx.font='bold 12px "Black Ops One"';ctx.textAlign='center';
+    ctx.fillText('💀 MEGA JAYJ  '+Math.ceil(boss.hp)+' / '+boss.maxHp,bx+bw/2,by+14);
+  }
+
+  ctx.restore();
+  drawTouchControls();
+}
+
+function drawPlayer(){
+  ctx.save();ctx.translate(player.x,player.y);
+  if(player.invincible>0&&Math.floor(player.invincible/4)%2===0)ctx.globalAlpha=0.4;
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.ellipse(2,15,13,4,0,0,Math.PI*2);ctx.fill();
+  // Body glow
+  let bg=ctx.createRadialGradient(0,-4,0,0,-4,17);bg.addColorStop(0,'#55ddff');bg.addColorStop(1,'#0055bb');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(0,0,16,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#99eeff';ctx.lineWidth=2;ctx.stroke();
+  // Face
+  ctx.fillStyle='#ffd090';ctx.beginPath();ctx.arc(0,-3,10,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#000';ctx.beginPath();ctx.arc(-3,-5,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(3,-5,2,0,Math.PI*2);ctx.fill();
+  // Smile
+  ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,-1,4,0.2,Math.PI-0.2);ctx.stroke();
+  // Arm / gun
+  let aim=Math.atan2(mouseWY-player.y,mouseWX-player.x);
+  ctx.strokeStyle='#ffcc00';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(aim)*24,Math.sin(aim)*24);ctx.stroke();
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(Math.cos(aim)*24,Math.sin(aim)*24,5,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.font='bold 9px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#99eeff';ctx.fillText('YOU',0,30);
+  ctx.restore();
+}
+
+function drawEnemy(e){
+  if(e.x+60<camX||e.x-60>camX+VW||e.y+80<camY||e.y-60>camY+VH)return;
+  ctx.save();ctx.translate(e.x,e.y);
+  let wb=Math.sin(e.wobble)*3;
+  if(e.type==='megajayj'){
+    let sc=e.rage?1+Math.sin(frameCount*0.18)*0.06:1;ctx.scale(sc,sc);
+    let aura=ctx.createRadialGradient(0,0,0,0,0,90);aura.addColorStop(0,e.rage?'#ff00ff44':'#88008833');aura.addColorStop(1,'transparent');
+    ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,90,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=e.hurtTimer>0?'#fff':(e.rage?'#dd00dd':'#880088');
+    ctx.beginPath();ctx.arc(wb,0,44,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=e.rage?'#ff00ff':'#cc44cc';ctx.lineWidth=5;ctx.stroke();
+    ctx.fillStyle='#ffccaa';ctx.beginPath();ctx.arc(wb,-6,30,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff0000';ctx.beginPath();ctx.arc(wb-10,-12,6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+10,-12,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-10,-11,3.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+10,-11,3.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.arc(wb,4,14,0.3,Math.PI-0.3);ctx.stroke();
+    ctx.fillStyle='#fff';for(let t=-1;t<=1;t++)ctx.fillRect(wb+t*8-4,10,7,9);
+    ctx.fillStyle='#ff4400';
+    for(let f=0;f<10;f++){let fa=(f/10)*Math.PI*2+frameCount*0.06;ctx.beginPath();ctx.arc(wb+Math.cos(fa)*48,Math.sin(fa)*48-5,7+Math.sin(frameCount*0.3+f)*2,0,Math.PI*2);ctx.fill();}
+    ctx.font='bold 13px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#ff00ff';ctx.shadowColor='#ff00ff';ctx.shadowBlur=10;ctx.fillText('MEGA JAYJ',0,66);ctx.shadowBlur=0;
+    drawHPBar(0,70,100,10,e.hp/e.maxHp,'#ff00ff');
+  }else if(e.isGuard){
+    ctx.fillStyle=e.hurtTimer>0?'#fff':'#774400';ctx.beginPath();ctx.arc(wb,0,28,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff8800';ctx.lineWidth=3;ctx.stroke();
+    ctx.fillStyle='#ffddaa';ctx.beginPath();ctx.arc(wb,-3,19,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-6,-6,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+6,-6,3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(wb-9,-12);ctx.lineTo(wb-3,-9);ctx.stroke();ctx.beginPath();ctx.moveTo(wb+9,-12);ctx.lineTo(wb+3,-9);ctx.stroke();
+    ctx.beginPath();ctx.arc(wb,5,8,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.fillStyle='#ffcc00';ctx.fillRect(wb-12,14,24,14);ctx.fillStyle='#000';ctx.font='bold 7px sans-serif';ctx.textAlign='center';ctx.fillText('GUARD',wb,24);
+    ctx.font='bold 10px "Black Ops One"';ctx.fillStyle='#ff8800';ctx.fillText('JAYJ GUARD',wb,44);
+    drawHPBar(wb,48,70,8,e.hp/e.maxHp,'#ff8800');
+  }else{
+    ctx.fillStyle=e.hurtTimer>0?'#fff':'#cc2200';ctx.beginPath();ctx.arc(wb,0,18,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ff4400';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#ffd090';ctx.beginPath();ctx.arc(wb,-2,12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(wb-4,-4,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(wb+4,-4,2,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(wb,3,5,0.3,Math.PI-0.3);ctx.stroke();
+    ctx.font='bold 9px "Black Ops One"';ctx.textAlign='center';ctx.fillStyle='#ff8888';ctx.fillText('JAYJ',wb,30);
+    drawHPBar(wb,33,40,5,e.hp/e.maxHp,'#ff4400');
+  }
+  ctx.restore();
+}
+function drawHPBar(x,y,w,h,frac,color){ctx.fillStyle='#220000';ctx.fillRect(x-w/2,y,w,h);ctx.fillStyle=color;ctx.fillRect(x-w/2,y,w*Math.max(0,frac),h);}
+
+function renderMinimap(){
+  if(state!=='level1'&&state!=='boss')return;
+  mctx.fillStyle='#080000';mctx.fillRect(0,0,120,80);
+  let sx=120/WORLD_W,sy=80/WORLD_H;
+  mctx.fillStyle='#3d1000';
+  for(let w of walls){if(w.isBossGate&&gateOpen)continue;mctx.fillRect(w.x*sx,w.y*sy,Math.max(1,w.w*sx),Math.max(1,w.h*sy));}
+  if(!gateOpen&&bossGateDef){mctx.fillStyle='#ff8800';mctx.fillRect(bossGateDef.x*sx,bossGateDef.y*sy,Math.max(2,bossGateDef.w*sx),Math.max(1,bossGateDef.h*sy));}
+  for(let e of enemies){mctx.fillStyle=e.type==='megajayj'?'#ff00ff':e.isGuard?'#ff8800':'#ff4400';mctx.fillRect(e.x*sx-2,e.y*sy-2,4,4);}
+  mctx.fillStyle='#44ccff';mctx.fillRect(player.x*sx-3,player.y*sy-3,6,6);
+  mctx.strokeStyle='#ffffff44';mctx.lineWidth=1;mctx.strokeRect(camX*sx,camY*sy,VW*sx,VH*sy);
+}
+
+// ── UI HELPERS ──
+function updateHPBar(){
+  let f=Math.max(0,player.hp/player.maxHp);
+  document.getElementById('hpBar').style.width=(f*100)+'%';
+  document.getElementById('hpNum').textContent=Math.ceil(player.hp);
+  document.getElementById('hpBar').style.background=f>0.5?'#ff4400':f>0.25?'#ff8800':'#ff0000';
+}
+function updateAmmoUI(){
+  let bar=document.getElementById('ammoBar');bar.innerHTML='';
+  for(let i=0;i<maxAmmo;i++){let d=document.createElement('div');d.className='ammo-dot'+(i<ammo?'':' empty');bar.appendChild(d);}
+}
+function updateKills(){let el=document.getElementById('killCount');if(el)el.textContent='KILLS: '+kills;}
+function showMessage(msg){let el=document.getElementById('message');el.innerHTML=msg;el.style.opacity='1';msgTimer=220;}
+function showGameOver(){
+  running=false;state='gameover';stopMusic();
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('overlay').innerHTML=`
+    <h1 style="color:#ff0000;font-size:80px">YOU DIED</h1>
+    <h2 style="color:#ff4400;font-size:24px;letter-spacing:4px;margin-bottom:18px">JAYJ WINS AGAIN</h2>
+    <p style="font-family:'Black Ops One',cursive;font-size:16px;color:#ffcc00;margin:8px 0">KILLS: ${kills} &nbsp;|&nbsp; SCORE: ${score}</p>
+    <button class="big-btn btn-start" style="margin-top:18px;background:#ff2200;color:#fff;box-shadow:0 0 28px #ff2200" onclick="startGame()">TRY AGAIN</button>
+    <button class="big-btn btn-sec" style="margin-top:8px" onclick="goToMenu()">MAIN MENU</button>
+  `;
+}
+function showWin(){
+  running=false;state='win';stopMusic();sfx(880,'square',0.8,0.3);
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('overlay').innerHTML=`
+    <h1 style="color:#ffcc00;font-size:72px">VICTORY!</h1>
+    <h2 style="color:#ff4400;font-size:24px;letter-spacing:4px;margin-bottom:18px">MEGA JAYJ DESTROYED!</h2>
+    <p style="font-family:'Black Ops One',cursive;font-size:16px;color:#ffcc00;margin:8px 0">🍔 BURGERS FIRED: MANY 🍔</p>
+    <p style="font-family:'Black Ops One',cursive;font-size:14px;color:#ff8844">KILLS: ${kills} &nbsp;|&nbsp; SCORE: ${score+1000}</p>
+    <button class="big-btn btn-start" style="margin-top:18px;background:#ffcc00;color:#000;box-shadow:0 0 28px #ffcc00" onclick="startGame()">PLAY AGAIN</button>
+    <button class="big-btn btn-sec" style="margin-top:8px" onclick="goToMenu()">MAIN MENU</button>
+  `;
+}
+
+// ── INPUT ──
+document.addEventListener('keydown',e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(e.key.toLowerCase()==='r'&&!reloading&&ammo<maxAmmo&&(state==='level1'||state==='boss')){reloading=true;reloadTimer=90;document.getElementById('reloadMsg').style.display='block';sfx(200,'square',0.25,0.08);}
+  if(e.key.toLowerCase()==='m')toggleMusic();
+  if(e.key==='Escape')goToMenu();
+});
+document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+
+canvas.addEventListener('mousemove',e=>{
+  let rect=canvas.getBoundingClientRect();mouseScX=e.clientX-rect.left;mouseScY=e.clientY-rect.top;
+  mouseWX=mouseScX+camX;mouseWY=mouseScY+camY;
+  let ch=document.getElementById('crosshair');ch.style.left=e.clientX+'px';ch.style.top=e.clientY+'px';
+});
+
+canvas.addEventListener('click',e=>{
+  if(state!=='level1'&&state!=='boss')return;
+  if(reloading){showMessage('RELOADING! WAIT...');return;}
+  if(ammo<=0){showMessage('🍔 NO BURGERS! PRESS R!');return;}
+  let rect=canvas.getBoundingClientRect();
+  let mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  let angle=Math.atan2(my-(player.y-camY),mx-(player.x-camX));
+  mkBullet(player.x+Math.cos(angle)*24,player.y+Math.sin(angle)*24,angle,true,22);
+  ammo--;updateAmmoUI();spawnPfx(player.x,player.y,'#ffcc00',5);sfx(800+Math.random()*200,'square',0.07,0.12);
+  if(ammo===0){reloading=true;reloadTimer=90;document.getElementById('reloadMsg').style.display='block';}
+});
+
+// ── TOUCH / VIRTUAL JOYSTICK ──
+// Left half = move joystick, Right half = aim + shoot
+const JRADIUS = 52;   // outer ring radius
+const JKNOB   = 22;   // inner knob radius
+let joystick = { active:false, id:null, baseX:0, baseY:0, dx:0, dy:0 };
+let aimTouch  = { active:false, id:null, x:0, y:0 };
+let shootCooldown = 0; // auto-fires while right finger is held
+
+function getTouchPos(touch){
+  let rect=canvas.getBoundingClientRect();
+  let scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+  return { x:(touch.clientX-rect.left)*scaleX, y:(touch.clientY-rect.top)*scaleY };
+}
+
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  initAudio(); // unlock audio on first touch
+  for(let t of e.changedTouches){
+    let pos=getTouchPos(t);
+    if(pos.x < VW/2){
+      // Left side — move joystick
+      if(!joystick.active){
+        joystick.active=true; joystick.id=t.identifier;
+        joystick.baseX=pos.x; joystick.baseY=pos.y;
+        joystick.dx=0; joystick.dy=0;
+      }
+    } else {
+      // Right side — aim + shoot
+      if(!aimTouch.active){
+        aimTouch.active=true; aimTouch.id=t.identifier;
+        aimTouch.x=pos.x; aimTouch.y=pos.y;
+        // Update aim direction
+        mouseScX=pos.x; mouseScY=pos.y;
+        mouseWX=mouseScX+camX; mouseWY=mouseScY+camY;
+      }
+    }
+  }
+},{passive:false});
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  for(let t of e.changedTouches){
+    let pos=getTouchPos(t);
+    if(t.identifier===joystick.id){
+      let ddx=pos.x-joystick.baseX, ddy=pos.y-joystick.baseY;
+      let dist=Math.sqrt(ddx*ddx+ddy*ddy);
+      let clamped=Math.min(dist,JRADIUS);
+      let angle=Math.atan2(ddy,ddx);
+      joystick.dx=Math.cos(angle)*(clamped/JRADIUS);
+      joystick.dy=Math.sin(angle)*(clamped/JRADIUS);
+    }
+    if(t.identifier===aimTouch.id){
+      aimTouch.x=pos.x; aimTouch.y=pos.y;
+      mouseScX=pos.x; mouseScY=pos.y;
+      mouseWX=mouseScX+camX; mouseWY=mouseScY+camY;
+    }
+  }
+},{passive:false});
+
+canvas.addEventListener('touchend', e=>{
+  e.preventDefault();
+  for(let t of e.changedTouches){
+    if(t.identifier===joystick.id){ joystick.active=false; joystick.dx=0; joystick.dy=0; joystick.id=null; }
+    if(t.identifier===aimTouch.id){ aimTouch.active=false; aimTouch.id=null; shootCooldown=0; }
+  }
+},{passive:false});
+
+canvas.addEventListener('touchcancel', e=>{
+  joystick.active=false; joystick.dx=0; joystick.dy=0; joystick.id=null;
+  aimTouch.active=false; aimTouch.id=null; shootCooldown=0;
+},{passive:false});
+
+// Inject touch movement into the update loop by patching keys via joystick
+// We override the dx/dy calculation in update via a global
+let touchDX=0, touchDY=0;
+
+// Patch update to include touch joystick movement
+const _origUpdate = update;
+// We integrate touch into the existing player move block by reading touchDX/touchDY
+// (already done below via the update override)
+
+// Touch auto-shoot: fires while right finger held
+function touchShootTick(){
+  if(!running) return;
+  if(aimTouch.active && (state==='level1'||state==='boss')){
+    if(shootCooldown<=0){
+      if(!reloading && ammo>0){
+        let angle=Math.atan2(mouseWY-player.y, mouseWX-player.x);
+        mkBullet(player.x+Math.cos(angle)*24, player.y+Math.sin(angle)*24, angle, true, 22);
+        ammo--; updateAmmoUI();
+        spawnPfx(player.x,player.y,'#ffcc00',5);
+        sfx(800+Math.random()*200,'square',0.07,0.12);
+        if(ammo===0){ reloading=true; reloadTimer=90; document.getElementById('reloadMsg').style.display='block'; }
+        shootCooldown=14;
+      } else if(ammo<=0 && !reloading){
+        reloading=true; reloadTimer=90;
+        document.getElementById('reloadMsg').style.display='block';
+        sfx(200,'square',0.25,0.08);
+      }
+    } else { shootCooldown--; }
+  } else { shootCooldown=0; }
+  requestAnimationFrame(touchShootTick);
+}
+requestAnimationFrame(touchShootTick);
+
+// Draw virtual joystick on canvas (called at end of render)
+function drawTouchControls(){
+  if(!('ontouchstart' in window)) return;
+  if(state!=='level1'&&state!=='boss') return;
+
+  // Left joystick base position (default when not active)
+  let bx=joystick.active?joystick.baseX:VW*0.18;
+  let by=joystick.active?joystick.baseY:VH*0.78;
+
+  ctx.save();
+  // Outer ring
+  ctx.globalAlpha=0.35;
+  ctx.strokeStyle='#ff4400'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(bx,by,JRADIUS,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#ff440022'; ctx.fill();
+  // Knob
+  let kx=bx+joystick.dx*JRADIUS, ky=by+joystick.dy*JRADIUS;
+  ctx.globalAlpha=0.65;
+  ctx.fillStyle='#ff4400'; ctx.beginPath(); ctx.arc(kx,ky,JKNOB,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ffcc00'; ctx.lineWidth=2; ctx.stroke();
+
+  // Right shoot zone
+  ctx.globalAlpha=0.12;
+  ctx.fillStyle=aimTouch.active?'#ffcc00':'#ff4400';
+  ctx.fillRect(VW/2, VH*0.45, VW/2, VH*0.55);
+
+  // Aim crosshair
+  ctx.globalAlpha=0.55;
+  ctx.strokeStyle=aimTouch.active?'#ffcc00':'#ff4400';
+  ctx.lineWidth=2;
+  let ax=aimTouch.active?aimTouch.x:VW*0.78;
+  let ay=aimTouch.active?aimTouch.y:VH*0.78;
+  ctx.beginPath(); ctx.moveTo(ax-20,ay); ctx.lineTo(ax+20,ay); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax,ay-20); ctx.lineTo(ax,ay+20); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ax,ay,11,0,Math.PI*2); ctx.stroke();
+
+  // Labels
+  ctx.globalAlpha=0.7;
+  ctx.font='bold 12px "Black Ops One"'; ctx.textAlign='center';
+  ctx.fillStyle='#ff8844';
+  ctx.fillText('MOVE', bx, by+JRADIUS+17);
+  ctx.fillStyle=aimTouch.active?'#ffcc00':'#ff8844';
+  ctx.fillText('HOLD TO SHOOT', VW*0.75, VH*0.47);
+
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+</script>
+</body>
+</html>
