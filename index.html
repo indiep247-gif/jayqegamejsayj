@@ -176,7 +176,7 @@ function resolveWall(ent,nx,ny){
 
 // ── STATE ──
 let state='menu',running=false;
-let player,enemies,bullets,particles;
+let player,enemies,bullets,particles,pizzas;
 let mouseWX=0,mouseWY=0,mouseScX=VW/2,mouseScY=VH/2;
 let keys={},score=0,kills=0;
 let ammo=6,maxAmmo=6,reloading=false,reloadTimer=0;
@@ -210,7 +210,7 @@ function init(){ initLevel(currentLevel); } // legacy shim
 function initLevel(n){
   currentLevel=n;
   kills=0; guardDead=false; gateOpen=false; boss=null;
-  ammo=maxAmmo; reloading=false; particles=[]; bullets=[]; frameCount=0;
+  ammo=maxAmmo; reloading=false; particles=[]; bullets=[]; pizzas=[]; frameCount=0;
   if(n===1) initLevel1();
   else if(n===2) initLevel2();
   else if(n===3) initLevel3();
@@ -438,7 +438,9 @@ function update(){
           setTimeout(()=>showWin(),900);
         }
         return;
-      }else{kills++;score+=100;sfx(320,'square',0.12,0.1);updateKills();}
+      }else{kills++;score+=100;sfx(320,'square',0.12,0.1);updateKills();
+        if(Math.random()<0.10){pizzas.push({x:e.x,y:e.y,r:14,life:600});}
+      }
       enemies.splice(i,1);continue;
     }
   }
@@ -483,6 +485,21 @@ function update(){
   // Particles
   for(let i=particles.length-1;i>=0;i--){
     let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.08;p.vx*=0.94;p.life--;if(p.life<=0)particles.splice(i,1);
+  }
+  // Pizzas
+  for(let i=pizzas.length-1;i>=0;i--){
+    let pz=pizzas[i];
+    pz.life--;
+    if(pz.life<=0){pizzas.splice(i,1);continue;}
+    let pdx=player.x-pz.x,pdy=player.y-pz.y;
+    if(Math.sqrt(pdx*pdx+pdy*pdy)<pz.r+player.w/2){
+      let heal=Math.min(25,player.maxHp-player.hp);
+      player.hp+=heal;updateHPBar();
+      spawnPfx(pz.x,pz.y,'#ffcc00',12);
+      sfx(660,'triangle',0.25,0.15);
+      showMessage('🍕 +'+heal+' HP!');
+      pizzas.splice(i,1);
+    }
   }
   if(player.hp<=0){player.hp=0;updateHPBar();showGameOver();}
   if(msgTimer>0){msgTimer--;if(msgTimer===0)document.getElementById('message').style.opacity='0';}
@@ -547,6 +564,15 @@ function render(){
   // Particles
   for(let p of particles){ctx.globalAlpha=p.life/40;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;
+
+  // Pizzas
+  for(let pz of pizzas){
+    let fade=pz.life<120?pz.life/120:1;
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(pz.x,pz.y);
+    ctx.font='24px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🍕',0,0);
+    ctx.restore();
+  }
 
   // Enemies
   enemies.forEach(e=>{
