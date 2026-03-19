@@ -44,6 +44,9 @@
   <p>M — MUSIC &nbsp;|&nbsp; ESC — MENU</p>
   <br>
   <button class="big-btn btn-start" id="startBtn" onclick="startGame()">LOCK AND LOAD</button>
+  <br>
+  <p style="font-size:11px;color:#ff4400;letter-spacing:2px;margin-top:10px">v1.6</p>
+  <p style="font-size:11px;color:#ff8844;letter-spacing:1px;margin-top:4px">• Fixed touch controls &nbsp;|&nbsp; • Added pizza health drops</p>
 </div>
 <div id="ui">
   <div class="ui-panel">HP<br><div id="hpBg"><div id="hpBar" style="width:100%"></div></div><div style="font-size:11px;margin-top:2px;color:#ff8844" id="hpNum">100</div></div>
@@ -447,9 +450,9 @@ function update(){
 
   // Periodic spawns
   let levelState = 'level'+currentLevel;
-  if(state===levelState&&frameCount%380===0){
+  if(state===levelState&&frameCount%600===0){
     let ct=enemies.filter(e=>!e.isGuard).length;
-    let maxEnemies=currentLevel===3?16:currentLevel===2?14:12;
+    let maxEnemies=currentLevel===3?10:currentLevel===2?9:8;
     if(ct<maxEnemies){
       let sp=[[500,1500],[1200,350],[850,1050],[1600,800],[350,650],[700,1300],[1400,500]];
       let p=sp[Math.floor(Math.random()*sp.length)];
