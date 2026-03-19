@@ -987,7 +987,7 @@ const _origUpdate = update;
 
 // Touch auto-shoot: fires while right finger held
 function touchShootTick(){
-  if(!running) return;
+  if(!running){ requestAnimationFrame(touchShootTick); return; }
   if(aimTouch.active && (state==='level1'||state==='boss'||state==='level2'||state==='boss2'||state==='level3'||state==='boss3')){
     if(shootCooldown<=0){
       if(!reloading && ammo>0){
