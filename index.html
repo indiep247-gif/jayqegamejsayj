@@ -322,10 +322,13 @@ function buildMap3(){
 function isPlaying(){ return state==='level1'||state==='level2'||state==='level3'||state==='boss'||state==='boss2'||state==='boss3'; }
 
 // ── LOOP ──
-function loop(){
+let lastTime=0;
+function loop(ts){
   if(!running)return;
   requestAnimationFrame(loop);
   if(!isPlaying())return;
+  if(ts-lastTime<16.5)return; // cap to ~60fps
+  lastTime=ts;
   frameCount++;update();render();renderMinimap();
 }
 
